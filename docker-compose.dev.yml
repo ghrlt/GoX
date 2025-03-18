@@ -1,0 +1,42 @@
+services:
+  dev_container:
+    build:
+      context: .
+      target: development
+    container_name: gox_dev
+    depends_on:
+      dev_db:
+        condition: service_healthy
+        restart: true
+    volumes:
+      - .:/app
+    ports:
+      - "47000:8080" # host:container ; on-container port is defined in .env files (SERVER_PORT)
+    env_file:
+      - .env.dev
+      - .env.dev.local
+
+  dev_db:
+    image: postgres:15
+    container_name: gox_dev_db
+    volumes:
+      - ./_data/postgres_dev:/var/lib/postgresql/data
+    ports:
+      - "47001:5432"
+    env_file:
+      - .env.dev
+
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "gox" ]
+      interval: 10s
+      retries: 5
+
+  dev_db_explorer:
+    image: dpage/pgadmin4
+    container_name: gox_pgadmin
+    env_file:
+      - .env.dev
+    ports:
+      - "47002:80"
+    depends_on:
+      - dev_db

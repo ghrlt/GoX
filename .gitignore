@@ -1,0 +1,6 @@
+go.sum
+go.mod
+
+tmp/
+_data/
+_data-prod/

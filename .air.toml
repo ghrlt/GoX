@@ -1,0 +1,20 @@
+[build]
+  cmd = "go build -buildvcs=false -o /tmp/main ."
+
+  bin = "/tmp/main"
+
+[log]
+  time = true
+
+[proxy]
+  enabled = false
+
+[watcher]
+  watch = [ "." ]
+  exts  = [ ".go", ".mod", ".sum" ]
+
+[watcher.ignore]
+  dirs = [ "vendor", "tmp", "_data" ]
+
+[watcher.delay]
+  duration = 5000
