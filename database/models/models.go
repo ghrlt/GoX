@@ -22,6 +22,14 @@ const (
 	TeamMemberRoleSpectator TeamMemberRole = "spectator"
 )
 
+type CreditOperationType string
+
+const (
+	CreditOperationTypeAdd    CreditOperationType = "add"
+	CreditOperationTypeRemove CreditOperationType = "remove"
+	CreditOperationTypeUse    CreditOperationType = "use"
+)
+
 type CouponTypes string
 
 const (
@@ -30,36 +38,36 @@ const (
 
 type Team struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	Type         TeamType
-	Name         string
-	IsAccessible bool `gorm:"default:true"`
+	Type         TeamType  `gorm:"not null"`
+	Name         string    `gorm:"not null"`
+	IsAccessible bool      `gorm:"default:true"`
 }
 type TeamMember struct {
-	ID           uint      `gorm:"primaryKey;autoIncrement"`
-	MemberID     uuid.UUID `gorm:"index;not null"`
-	Member       User      `gorm:"foreignKey:MemberID;constraint:OnUpdate:CASCADE;OnDelete:SET NULL;"`
-	TeamID       uuid.UUID `gorm:"index;not null"`
-	Team         Team      `gorm:"foreignKey:TeamID;constraint:OnUpdate:CASCADE;OnDelete:CASCADE;"`
-	Role         TeamMemberRole
-	IsActive     bool
-	IsAccessible bool `gorm:"default:true"`
+	ID           uint           `gorm:"primaryKey;autoIncrement"`
+	MemberID     uuid.UUID      `gorm:"index;not null"`
+	Member       User           `gorm:"foreignKey:MemberID;constraint:OnUpdate:CASCADE;OnDelete:SET NULL;"`
+	TeamID       uuid.UUID      `gorm:"index;not null"`
+	Team         Team           `gorm:"foreignKey:TeamID;constraint:OnUpdate:CASCADE;OnDelete:CASCADE;"`
+	Role         TeamMemberRole `gorm:"not null"`
+	IsActive     bool           `gorm:"default:true"`
+	IsAccessible bool           `gorm:"default:true"`
 }
 
 type User struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	Email        string    `gorm:"index;unique"`
-	Password     string
-	IsActive     bool
-	IsAccessible bool `gorm:"default:true"`
+	Password     string    `gorm:"not null"`
+	IsActive     bool      `gorm:"default:true"`
+	IsAccessible bool      `gorm:"default:true"`
 }
 
 type UserProfile struct {
-	ID                 uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	CustomerID         uuid.UUID `gorm:"index;not null"`
-	Customer           User      `gorm:"foreignKey:CustomerID;constraint:OnUpdate:CASCADE;OnDelete:CASCADE;"`
-	Username           string
-	AvatarURL          string
-	PublicStatsDisplay bool
+	ID         uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	CustomerID uuid.UUID `gorm:"index;not null"`
+	Customer   User      `gorm:"foreignKey:CustomerID;constraint:OnUpdate:CASCADE;OnDelete:CASCADE;"`
+	Username   string    `gorm:"not null"`
+	// AvatarURL          string   `gorm:"default:null"`
+	PublicStatsDisplay bool `gorm:"default:true"`
 	IsAccessible       bool `gorm:"default:true"`
 }
 
@@ -67,50 +75,54 @@ type UserCredit struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	CustomerID   uuid.UUID `gorm:"index;not null"`
 	Customer     User      `gorm:"foreignKey:CustomerID;constraint:OnUpdate:CASCADE;OnDelete:SET NULL;"`
-	Balance      int
-	IsAccessible bool `gorm:"default:true"`
+	Balance      int       `gorm:"not null;default:0"`
+	IsAccessible bool      `gorm:"default:true"`
+}
+
+type UserCreditHistory struct {
+	ID           uint                `gorm:"primaryKey;autoIncrement"`
+	CustomerID   uuid.UUID           `gorm:"index;not null"`
+	Customer     User                `gorm:"foreignKey:CustomerID;constraint:OnUpdate:CASCADE;OnDelete:SET NULL;"`
+	Amount       int                 `gorm:"not null"`
+	Operation    CreditOperationType `gorm:"type:credit_operation_type"`
+	Reason       string              `gorm:"not null"`
+	DateTime     time.Time           `gorm:"not null"`
+	IsAccessible bool                `gorm:"default:true"`
 }
 
 type UserSubscription struct {
 	ID             uuid.UUID    `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	CustomerID     uuid.UUID    `gorm:"index;not null"`
-	Customer       User         `gorm:"foreignKey:CustomerID;constraint:OnUpdate:CASCADE;OnDelete:SET NULL;"`
+	Customer       User         `gorm:"foreignKey:CustomerID;constraint:OnUpdate:CASCADE;OnDelete:CASCADE;"`
 	SubscriptionID uuid.UUID    `gorm:"index;not null"`
-	Subscription   Subscription `gorm:"foreignKey:SubscriptionID;constraint:OnUpdate:CASCADE;OnDelete:SET NULL;"`
-	StartedOn      time.Time
-	ExpiresOn      time.Time
-	IsAccessible   bool `gorm:"default:true"`
-}
-type Subscription struct {
-	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	Name         string
-	Description  string
-	Price        int
-	Currency     string
-	ValidFor     int
-	IsAccessible bool `gorm:"default:true"`
+	Subscription   Subscription `gorm:"foreignKey:SubscriptionID;constraint:OnUpdate:CASCADE;OnDelete:CASCADE;"`
+	StartAt        time.Time    `gorm:"not null"`
+	AutoRenew      bool         `gorm:"default:true"`
+	TotalPrice     int          `gorm:"not null"`
+	IsAccessible   bool         `gorm:"default:true"`
 }
 
-type Coupon struct {
-	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	SecretCode   string    `gorm:"unique"`
-	Libelle      string
-	Description  string
-	Type         CouponTypes
-	Value        int
-	IssuedAt     time.Time
-	Expires      time.Time
-	IsUsed       bool
-	IsAccessible bool `gorm:"default:true"`
+type Subscription struct {
+	ID             uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	Name           string    `gorm:"not null"`
+	Description    string    `gorm:"not null"`
+	Price          int       `gorm:"not null"`
+	Currency       string    `gorm:"default:'credits'"`
+	ValidForInDays int       `gorm:"default:7"`
+	IsAccessible   bool      `gorm:"default:true"`
 }
-type CouponHistory struct {
-	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	CouponID     uuid.UUID `gorm:"index;not null"`
-	Coupon       Coupon    `gorm:"foreignKey:CouponID;constraint:OnUpdate:CASCADE;OnDelete:SET NULL;"`
-	CustomerID   uuid.UUID `gorm:"index;not null"`
-	Customer     User      `gorm:"foreignKey:CustomerID;constraint:OnUpdate:CASCADE;OnDelete:SET NULL;"`
-	UsedAt       time.Time
-	IsAccessible bool `gorm:"default:true"`
+
+type SubscriptionPerks struct {
+	ID                        uuid.UUID        `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	UserSubscriptionID        uuid.UUID        `gorm:"index;not null"`
+	UserSubscription          UserSubscription `gorm:"foreignKey:UserSubscriptionID;constraint:OnUpdate:CASCADE;OnDelete:CASCADE;"`
+	CollaborativeTeamCount    int              `gorm:"default:1"`
+	IncludedTeamCount         int              `gorm:"default:1"`
+	PricePerAdditionalTeam    int              `gorm:"default:25"`
+	MaxProductsPerTeam        int              `gorm:"default:1"`
+	IncludedProductCount      int              `gorm:"default:1"`
+	PricePerAdditionalProduct int              `gorm:"default:50"`
+	IsAccessible              bool             `gorm:"default:true"`
 }
 
 type RequestLog struct {

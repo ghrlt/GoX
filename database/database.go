@@ -27,10 +27,10 @@ func InitDB(dsn string) {
 		&models.User{},
 		&models.UserProfile{},
 		&models.UserCredit{},
+		&models.UserCreditHistory{},
 		&models.UserSubscription{},
 		&models.Subscription{},
-		&models.Coupon{},
-		&models.CouponHistory{},
+		&models.SubscriptionPerks{},
 		&models.RequestLog{},
 	)
 	if err != nil {

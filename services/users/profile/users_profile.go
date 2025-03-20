@@ -11,9 +11,9 @@ import (
 func Create(db *gorm.DB, userID uuid.UUID, profile models.UserProfile) error {
 	// Création de l'utilisateur
 	result := database.DB.Create(&models.UserProfile{
-		CustomerID:         userID,
-		Username:           profile.Username,
-		AvatarURL:          profile.AvatarURL,
+		CustomerID: userID,
+		Username:   profile.Username,
+		// AvatarURL:          profile.AvatarURL,
 		PublicStatsDisplay: profile.PublicStatsDisplay,
 	})
 

@@ -61,6 +61,9 @@ func UserRouteMiddleware(next http.Handler) http.Handler {
 			// ~ OK. Serve.
 			next.ServeHTTP(w, r)
 			return
+		} else if strings.HasSuffix(r.URL.Path, "/subscriptions") {
+			http.Error(w, "User is not allowed to access this user's subscriptions", http.StatusForbidden)
+			return
 		}
 
 		// ~ 2) is the requested user a member of the same team as the user in the URL?

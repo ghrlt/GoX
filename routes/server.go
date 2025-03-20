@@ -83,6 +83,32 @@ func Start() {
 		}
 	}, []func(http.Handler) http.Handler{users.UserRouteMiddleware})
 
+	createRoute(router, []string{http.MethodGet, http.MethodPost}, "/users/{id}/subscriptions", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			users.HandleGetUserSubscriptions(w, r)
+		} else if r.Method == http.MethodPost {
+			users.HandleCreateUserSubscription(w, r)
+		}
+	}, []func(http.Handler) http.Handler{users.UserRouteMiddleware})
+
+	createRoute(router, []string{http.MethodGet, http.MethodPatch, http.MethodDelete}, "/users/{id}/subscriptions/{subscription_id}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			users.HandleGetUserSubscription(w, r)
+		} else if r.Method == http.MethodPatch {
+			users.HandleUpdateUserSubscription(w, r)
+		} else if r.Method == http.MethodDelete {
+			users.HandleDeleteUserSubscription(w, r)
+		}
+	}, []func(http.Handler) http.Handler{users.UserRouteMiddleware})
+
+	createRoute(router, []string{http.MethodGet, http.MethodPatch}, "/users/{id}/subscriptions/{subscription_id}/perks", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			users.HandleGetUserSubscriptionPerks(w, r)
+		} else if r.Method == http.MethodPatch {
+			users.HandleUpdateUserSubscriptionPerks(w, r)
+		}
+	}, []func(http.Handler) http.Handler{users.UserRouteMiddleware})
+
 	// ~ TEAMS ~
 
 	createRoute(router, []string{http.MethodGet, http.MethodPost}, "/teams", func(w http.ResponseWriter, r *http.Request) {
