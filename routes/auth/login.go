@@ -19,27 +19,27 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		utils.AbortRequest(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	// Vérifie l’utilisateur en base
 	var user models.User
 	if err := database.DB.Where("email = ?", input.Email).First(&user).Error; err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		utils.AbortRequest(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	// Vérifie le mot de passe
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		utils.AbortRequest(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	// Générer un token JWT
 	token, err := utils.GenerateJWT(user.ID, false)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Could not generate token: %s", err), http.StatusInternalServerError)
+		utils.AbortRequest(w, fmt.Sprintf("Could not generate token: %s", err), http.StatusInternalServerError)
 		return
 	}
 

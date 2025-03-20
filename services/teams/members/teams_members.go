@@ -1,8 +1,10 @@
 package team_member_service
 
 import (
+	"fmt"
 	"gox/database"
 	"gox/database/models"
+	"strconv"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +23,25 @@ func GetAll(teamID uuid.UUID) ([]models.TeamMember, error) {
 	return members, nil
 }
 
-func Get(teamID, memberID uuid.UUID) (models.TeamMember, error) {
+func Get(teamID uuid.UUID, teamMemberID string) (models.TeamMember, error) {
+	var member models.TeamMember
+
+	memberIDInt, err := strconv.Atoi(teamMemberID)
+	if err != nil {
+		return models.TeamMember{}, fmt.Errorf("invalid team member ID: %v", err)
+	}
+	// Requête avec filtre : TeamID = teamID ET ID = teamMemberID
+	result := database.DB.Where("team_id = ? AND id = ?", teamID, memberIDInt).First(&member)
+
+	// Vérification des erreurs GORM
+	if result.Error != nil {
+		return models.TeamMember{}, result.Error
+	}
+
+	return member, nil
+}
+
+func GetByMemberId(teamID, memberID uuid.UUID) (models.TeamMember, error) {
 	var member models.TeamMember
 
 	// Requête avec filtre : TeamID = teamID ET MemberID = memberID

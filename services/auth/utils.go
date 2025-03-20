@@ -9,21 +9,21 @@ func CheckAuthenticationHeader(w http.ResponseWriter, r *http.Request) bool {
 	// Récupérer le token
 	tokenString := r.Header.Get("Authorization")
 	if tokenString == "" {
-		http.Error(w, "Authorization Token is missing.", http.StatusUnauthorized)
+		utils.AbortRequest(w, "Authorization Token is missing.", http.StatusUnauthorized)
 		return false
 	}
 
 	// Décoder le token et récupérer les claims
 	claims, err := utils.DecodeJWT(tokenString)
 	if err != nil {
-		http.Error(w, "Authorization Token is invalid.", http.StatusUnauthorized)
+		utils.AbortRequest(w, "Authorization Token is invalid.", http.StatusUnauthorized)
 		return false
 	}
 
 	// Récupérer l'ID utilisateur
 	authUserID, ok := claims["user"].(string)
 	if !ok || authUserID == "" {
-		http.Error(w, "Authorization Token payload is invalid.", http.StatusUnauthorized)
+		utils.AbortRequest(w, "Authorization Token payload is invalid.", http.StatusUnauthorized)
 		return false
 	}
 
@@ -41,13 +41,13 @@ func IsAuthenticatedUserAdmin(w http.ResponseWriter, r *http.Request) bool {
 	// Vérifier le rôle
 	claims, err := utils.DecodeJWT(r.Header.Get("Authorization"))
 	if err != nil {
-		http.Error(w, "Authorization Token is invalid.", http.StatusUnauthorized)
+		utils.AbortRequest(w, "Authorization Token is invalid.", http.StatusUnauthorized)
 		return false
 	}
 
 	admin, ok := claims["admin"].(bool)
 	if !ok || !admin {
-		http.Error(w, "Unauthorized", http.StatusForbidden)
+		// utils.AbortRequest(w, "Unauthorized", http.StatusForbidden)
 		return false
 	}
 

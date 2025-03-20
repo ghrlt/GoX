@@ -6,6 +6,7 @@ import (
 	"gox/database/models"
 	team_service "gox/services/teams"
 	team_member_service "gox/services/teams/members"
+	"strings"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -40,6 +41,15 @@ func Create(email, password string) (uuid.UUID, error) {
 	// Insertion en base
 	if err := database.DB.Create(&user).Error; err != nil {
 		return uuid.UUID{}, fmt.Errorf("error creating user: %v", err)
+	}
+
+	// Création d'un profil par défaut pour l'utilisateur
+	profile := models.UserProfile{
+		CustomerID: user.ID,
+		Username:   strings.Split(user.ID.String(), "-")[0],
+	}
+	if err := database.DB.Create(&profile).Error; err != nil {
+		return uuid.UUID{}, fmt.Errorf("error creating user profile: %v", err)
 	}
 
 	// Création d'une équipe par défaut pour l'utilisateur

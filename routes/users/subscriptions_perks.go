@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	user_subscription_service "gox/services/users/subscriptions"
 	user_sub_perks_service "gox/services/users/subscriptions/perks"
+	"gox/utils"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -18,30 +19,30 @@ func HandleGetUserSubscriptionPerks(w http.ResponseWriter, r *http.Request) {
 	subscriptionID := vars["subscription_id"]
 
 	if userID == "" {
-		http.Error(w, "user id is required", http.StatusBadRequest)
+		utils.AbortRequest(w, "user id is required", http.StatusBadRequest)
 		return
 	}
 
 	if subscriptionID == "" {
-		http.Error(w, "subscription id is required", http.StatusBadRequest)
+		utils.AbortRequest(w, "subscription id is required", http.StatusBadRequest)
 		return
 	}
 
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		utils.AbortRequest(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
 	subscriptionUUID, err := uuid.Parse(subscriptionID)
 	if err != nil {
-		http.Error(w, "invalid subscription id", http.StatusBadRequest)
+		utils.AbortRequest(w, "invalid subscription id", http.StatusBadRequest)
 		return
 	}
 
 	userSubscriptionPerks, err := user_sub_perks_service.GetPerks(userUUID, subscriptionUUID)
 	if err != nil {
-		http.Error(w, "Error fetching user subscription perks", http.StatusInternalServerError)
+		utils.AbortRequest(w, "Error fetching user subscription perks", http.StatusInternalServerError)
 		return
 	}
 
@@ -55,24 +56,24 @@ func HandleUpdateUserSubscriptionPerks(w http.ResponseWriter, r *http.Request) {
 	subscriptionID := vars["subscription_id"]
 
 	if userID == "" {
-		http.Error(w, "user id is required", http.StatusBadRequest)
+		utils.AbortRequest(w, "user id is required", http.StatusBadRequest)
 		return
 	}
 
 	if subscriptionID == "" {
-		http.Error(w, "subscription id is required", http.StatusBadRequest)
+		utils.AbortRequest(w, "subscription id is required", http.StatusBadRequest)
 		return
 	}
 
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		utils.AbortRequest(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
 	subscriptionUUID, err := uuid.Parse(subscriptionID)
 	if err != nil {
-		http.Error(w, "invalid subscription id", http.StatusBadRequest)
+		utils.AbortRequest(w, "invalid subscription id", http.StatusBadRequest)
 		return
 	}
 
@@ -84,26 +85,26 @@ func HandleUpdateUserSubscriptionPerks(w http.ResponseWriter, r *http.Request) {
 	// Mise à jour des avantages de l'abonnement
 	err = user_sub_perks_service.UpdatePerks(userUUID, subscriptionUUID, updateSubscriptionData.CollaborativeTeamCount, updateSubscriptionData.MaxProductsPerTeam)
 	if err != nil {
-		http.Error(w, "Error updating subscription perks", http.StatusInternalServerError)
+		utils.AbortRequest(w, "Error updating subscription perks", http.StatusInternalServerError)
 		return
 	}
 
 	// Mise à jour du prix total
 	totalPrice, err := user_subscription_service.CalculateTotalPrice(subscriptionUUID)
 	if err != nil {
-		http.Error(w, "Error calculating total price", http.StatusInternalServerError)
+		utils.AbortRequest(w, "Error calculating total price", http.StatusInternalServerError)
 		return
 	}
 
 	if err := user_subscription_service.UpdatePrice(subscriptionUUID, totalPrice); err != nil {
-		http.Error(w, "Error updating user subscription price", http.StatusInternalServerError)
+		utils.AbortRequest(w, "Error updating user subscription price", http.StatusInternalServerError)
 		return
 	}
 
 	// Envoi de la réponse, avec les avantages mis à jour
 	userSubscriptionPerks, err := user_sub_perks_service.GetPerks(userUUID, subscriptionUUID)
 	if err != nil {
-		http.Error(w, "Error fetching user subscription perks", http.StatusInternalServerError)
+		utils.AbortRequest(w, "Error fetching user subscription perks", http.StatusInternalServerError)
 		return
 	}
 

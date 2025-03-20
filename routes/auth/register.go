@@ -18,21 +18,25 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		utils.AbortRequest(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	// Créer l'utilisateur
 	userID, err := user_service.Create(input.Email, input.Password)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Could not create user: %s", err), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"succes": false,
+			"error":  err.Error(),
+		})
 		return
 	}
 
 	// Générer un token JWT
 	token, err := utils.GenerateJWT(userID, false)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Could not generate token: %s", err), http.StatusInternalServerError)
+		utils.AbortRequest(w, fmt.Sprintf("Could not generate token: %s", err), http.StatusInternalServerError)
 		return
 	}
 

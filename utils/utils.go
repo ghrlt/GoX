@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -87,4 +88,18 @@ func ExtractUserIDFromJWT(r *http.Request) (uuid.UUID, error) {
 	}
 
 	return userID, nil
+}
+
+func AbortRequest(w http.ResponseWriter, message string, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]any{
+		"succes": false,
+		"error":  message,
+	})
+}
+
+func RespondJSON(w http.ResponseWriter, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
 }

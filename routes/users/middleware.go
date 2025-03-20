@@ -22,6 +22,7 @@ func UsersRouteMiddleware(next http.Handler) http.Handler {
 
 			// ~ Only admins can view all users
 			if !auth_utils.IsAuthenticatedUserAdmin(w, r) {
+				utils.AbortRequest(w, "Unauthorized", http.StatusForbidden)
 				return
 			}
 		}
@@ -39,7 +40,7 @@ func UserRouteMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// ~ If the user is not an admin, let's check that the user has rights to access this specific user
+		// ~ If the user is an admin, serve. Else let's check that the user has rights to access this specific user
 		if auth_utils.IsAuthenticatedUserAdmin(w, r) {
 			// ~ OK. Serve.
 			next.ServeHTTP(w, r)
@@ -56,31 +57,44 @@ func UserRouteMiddleware(next http.Handler) http.Handler {
 		// ~ Let's check that the user has rights to access this specific user
 		// ~ 1) is the user the same as the one in the URL?
 		vars := mux.Vars(r)
-		userID := vars["id"]
-		if auth_utils.GetAuthenticatedUserID(w, r) == userID {
+		urlUserID := vars["id"]
+
+		if urlUserID == "me" {
+			// ~ OK. Serve.
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if auth_utils.GetAuthenticatedUserID(w, r) == urlUserID {
 			// ~ OK. Serve.
 			next.ServeHTTP(w, r)
 			return
 		} else if strings.HasSuffix(r.URL.Path, "/subscriptions") {
-			http.Error(w, "User is not allowed to access this user's subscriptions", http.StatusForbidden)
+			utils.AbortRequest(w, "User is not allowed to access this user's subscriptions", http.StatusForbidden)
+			return
+		}
+
+		urlUserUUID, err := uuid.Parse(urlUserID)
+		if err != nil {
+			utils.AbortRequest(w, "Invalid user ID", http.StatusBadRequest)
 			return
 		}
 
 		// ~ 2) is the requested user a member of the same team as the user in the URL?
 		userUUID, err := utils.ExtractUserIDFromJWT(r)
 		if err != nil {
-			http.Error(w, "Invalid user ID", http.StatusInternalServerError)
+			utils.AbortRequest(w, "Invalid user ID", http.StatusInternalServerError)
 			return
 		}
 
 		userTeams, err := team_service.GetTeamsByMemberID(userUUID)
 		if err != nil {
-			http.Error(w, "Error getting user teams", http.StatusInternalServerError)
+			utils.AbortRequest(w, "Error getting user teams", http.StatusInternalServerError)
 			return
 		}
 
 		if len(userTeams) == 0 {
-			http.Error(w, "User has no teams", http.StatusForbidden)
+			utils.AbortRequest(w, "User has no teams", http.StatusForbidden)
 			return
 		}
 
@@ -88,9 +102,9 @@ func UserRouteMiddleware(next http.Handler) http.Handler {
 		for i, team := range userTeams {
 			userTeamsUUIDs[i] = team.ID
 		}
-		isIn := team_service.IsUserInTeams(userUUID, userTeamsUUIDs)
+		isIn := team_service.IsUserInTeams(urlUserUUID, userTeamsUUIDs)
 		if !isIn {
-			http.Error(w, "User is not in a team with the user in the URL", http.StatusForbidden)
+			utils.AbortRequest(w, "User is not in a team with the user in the URL", http.StatusForbidden)
 			return
 		}
 

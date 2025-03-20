@@ -11,7 +11,7 @@ import (
 
 func GetAll(userID uuid.UUID) ([]models.UserSubscription, error) {
 	var subscriptions []models.UserSubscription
-	if err := database.DB.Where("customer_id = ?", userID).Find(&subscriptions).Error; err != nil {
+	if err := database.DB.Preload("Subscription").Preload("SubscriptionPerks").Where("customer_id = ? AND is_accessible = ?", userID, true).Find(&subscriptions).Error; err != nil {
 		return nil, err
 	}
 	return subscriptions, nil
@@ -19,7 +19,15 @@ func GetAll(userID uuid.UUID) ([]models.UserSubscription, error) {
 
 func Get(userID uuid.UUID, subscriptionID uuid.UUID) (*models.UserSubscription, error) {
 	var subscription models.UserSubscription
-	if err := database.DB.Where("customer_id = ? AND id = ?", userID, subscriptionID).First(&subscription).Error; err != nil {
+	if err := database.DB.Preload("Subscription").Preload("SubscriptionPerks").Where("customer_id = ? AND id = ? AND is_accessible = ?", userID, subscriptionID, true).First(&subscription).Error; err != nil {
+		return nil, err
+	}
+	return &subscription, nil
+}
+
+func GetByID(userSubscriptionID uuid.UUID) (*models.UserSubscription, error) {
+	var subscription models.UserSubscription
+	if err := database.DB.Preload("Subscription").Preload("SubscriptionPerks").Where("id = ?", userSubscriptionID).First(&subscription).Error; err != nil {
 		return nil, err
 	}
 	return &subscription, nil
@@ -81,7 +89,7 @@ func Create(userID uuid.UUID, subscriptionID uuid.UUID, autoRenew bool) (*models
 		TotalPrice:     subscription.Price,
 		IsAccessible:   false, // ~ Subscription is not accessible until perks are added
 	}
-	if err := database.DB.Create(&subscription).Error; err != nil {
+	if err := database.DB.Create(&userSubscription).Error; err != nil {
 		return nil, err
 	}
 
@@ -110,7 +118,7 @@ func Update(userID uuid.UUID, subscriptionID uuid.UUID, autoRenew bool) error {
 }
 
 func UpdatePrice(userSubscriptionID uuid.UUID, totalPrice int) error {
-	subscription, err := GetActive(userSubscriptionID)
+	subscription, err := GetByID(userSubscriptionID)
 	if err != nil {
 		return err
 	}

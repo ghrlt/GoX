@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"gox/database"
 	"gox/database/models"
+	"gox/routes/administration"
+	admin_subscriptions "gox/routes/administration/subscriptions"
 	"gox/routes/auth"
 	"gox/routes/teams"
 	"gox/routes/users"
@@ -18,7 +20,8 @@ import (
 func createRoute(router *mux.Router, methods []string, route string, handler http.HandlerFunc, middlewares []func(http.Handler) http.Handler) {
 	utils.ConsoleLog("🚦 Creating route %s %s", methods, route)
 
-	middlewares = append(middlewares, RequestLoggerMiddleware)
+	// Add RequestLoggerMiddleware to all routes, must be the first middleware
+	middlewares = append([]func(http.Handler) http.Handler{RequestLoggerMiddleware}, middlewares...)
 
 	r := router.HandleFunc(route, handler).Methods(methods...)
 	for _, middleware := range middlewares {
@@ -68,6 +71,15 @@ func Start() {
 			users.HandleUpdateUser(w, r)
 		} else if r.Method == http.MethodDelete {
 			users.HandleDeleteUser(w, r)
+		}
+	}, []func(http.Handler) http.Handler{users.UserRouteMiddleware})
+
+	createRoute(router, []string{http.MethodGet, http.MethodPost}, "/users/{id}/teams", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			users.HandleGetUserTeams(w, r)
+
+		} else if r.Method == http.MethodPost {
+			teams.HandleCreateTeam(w, r)
 		}
 	}, []func(http.Handler) http.Handler{users.UserRouteMiddleware})
 
@@ -121,7 +133,7 @@ func Start() {
 
 	createRoute(router, []string{http.MethodGet, http.MethodPatch, http.MethodDelete}, "/teams/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
-			teams.HandleViewTeams(w, r)
+			teams.HandleGetTeam(w, r)
 		} else if r.Method == http.MethodPatch {
 			teams.HandleUpdateTeam(w, r)
 		} else if r.Method == http.MethodDelete {
@@ -135,22 +147,33 @@ func Start() {
 		} else if r.Method == http.MethodPost {
 			teams.HandleAddTeamMember(w, r)
 		}
-	}, []func(http.Handler) http.Handler{teams.TeamMemberRouteMiddleware})
+	}, []func(http.Handler) http.Handler{teams.TeamRouteMiddleware})
 
-	createRoute(router, []string{http.MethodGet, http.MethodPatch, http.MethodDelete}, "/teams/{id}/members/{memberID}", func(w http.ResponseWriter, r *http.Request) {
+	createRoute(router, []string{http.MethodGet, http.MethodPatch, http.MethodDelete}, "/teams/{id}/members/{member_id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			teams.HandleGetTeamMember(w, r)
 		} else if r.Method == http.MethodPatch {
 			teams.HandleUpdateTeamMemberRole(w, r)
-
 		} else if r.Method == http.MethodDelete {
 			teams.HandleRemoveTeamMember(w, r)
 		}
 	}, []func(http.Handler) http.Handler{teams.TeamMemberRouteMiddleware})
 
+	// ~ ADMINISTRATION ~
+
+	createRoute(router, []string{http.MethodGet, http.MethodPost, http.MethodPatch}, "/administrate/subscriptions", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			admin_subscriptions.HandleGetSubscriptions(w, r)
+		} else if r.Method == http.MethodPost {
+			admin_subscriptions.HandleCreateSubscription(w, r)
+		} else if r.Method == http.MethodPatch {
+			admin_subscriptions.HandleUpdateSubscription(w, r)
+		}
+	}, []func(http.Handler) http.Handler{administration.AdministrationRouteMiddleware})
+
 	// ~ all others routes, 404
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "404 - Route Not Found", http.StatusNotFound)
+		utils.AbortRequest(w, "404 - Route Not Found", http.StatusNotFound)
 	})
 
 	utils.ConsoleLog("🌍 Server started on http://%s", addr)
@@ -178,7 +201,7 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 			id, err := utils.ExtractUserIDFromJWT(r)
 			if err != nil {
 				utils.ConsoleLog("❌ Erreur lors de la récupération de l'ID utilisateur: %v", err)
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				utils.AbortRequest(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
 			authUserID = id

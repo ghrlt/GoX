@@ -11,6 +11,7 @@ import (
 	"gox/database/models"
 	team_member_service "gox/services/teams/members"
 	user_service "gox/services/users"
+	"gox/utils"
 )
 
 // ~ /teams/{id}/members ~
@@ -20,7 +21,7 @@ func HandleAddTeamMember(w http.ResponseWriter, r *http.Request) {
 
 	teamUUID, err := checkForTeamID(teamID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
@@ -29,27 +30,27 @@ func HandleAddTeamMember(w http.ResponseWriter, r *http.Request) {
 		Role   models.TeamMemberRole `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "body invalid", http.StatusBadRequest)
+		utils.AbortRequest(w, "body invalid", http.StatusBadRequest)
 		return
 	}
 
 	userUUID, err := uuid.Parse(input.UserID)
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		utils.AbortRequest(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
 
 	// Vérification de l'existence de l'utilisateur
 	_, err = user_service.Get(userUUID)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		utils.AbortRequest(w, "User not found", http.StatusNotFound)
 		return
 	}
 
 	// Ajout du membre à la Team
 	err = team_member_service.Add(teamUUID, userUUID, input.Role)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.AbortRequest(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -66,20 +67,28 @@ func HandleGetTeamMembers(w http.ResponseWriter, r *http.Request) {
 
 	teamUUID, err := checkForTeamID(teamID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	// Récupération des membres de la Team
 	members, err := team_member_service.GetAll(teamUUID)
 	if err != nil {
-		http.Error(w, "Error fetching team members", http.StatusInternalServerError)
+		utils.AbortRequest(w, "Error fetching team members", http.StatusInternalServerError)
 		return
 	}
 
 	// Réponse JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(members)
+	data := make([]map[string]interface{}, len(members))
+	for i, member := range members {
+		data[i] = map[string]interface{}{
+			"id":        member.ID,
+			"user_id":   member.MemberID,
+			"role":      member.Role,
+			"is_active": member.IsActive,
+		}
+	}
+	utils.RespondJSON(w, data)
 }
 
 // ~ /teams/{id}/members/{member_id} ~
@@ -103,26 +112,25 @@ func HandleGetTeamMember(w http.ResponseWriter, r *http.Request) {
 
 	teamUUID, err := checkForTeamID(teamID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	memberUUID, err := checkForMemberID(memberID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid member ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, "Invalid team ID", http.StatusBadRequest)
 		return
 	}
 
 	// Récupération du membre de la Team
-	member, err := team_member_service.Get(teamUUID, memberUUID)
+	member, err := team_member_service.Get(teamUUID, memberID)
 	if err != nil {
-		http.Error(w, "Team member not found", http.StatusNotFound)
+		utils.AbortRequest(w, "Team member not found", http.StatusNotFound)
 		return
 	}
 
 	// Réponse JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(member)
+	data := map[string]interface{}{
+		"id":        member.ID,
+		"user_id":   member.MemberID,
+		"role":      member.Role,
+		"is_active": member.IsActive,
+	}
+	utils.RespondJSON(w, data)
 }
 
 func HandleUpdateTeamMemberRole(w http.ResponseWriter, r *http.Request) {
@@ -132,13 +140,13 @@ func HandleUpdateTeamMemberRole(w http.ResponseWriter, r *http.Request) {
 
 	teamUUID, err := checkForTeamID(teamID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	memberUUID, err := checkForMemberID(memberID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid member ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, fmt.Sprintf("Invalid member ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
@@ -146,14 +154,14 @@ func HandleUpdateTeamMemberRole(w http.ResponseWriter, r *http.Request) {
 		Role models.TeamMemberRole `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "body invalid", http.StatusBadRequest)
+		utils.AbortRequest(w, "body invalid", http.StatusBadRequest)
 		return
 	}
 
 	// Mise à jour du rôle du membre
 	err = team_member_service.UpdateRole(teamUUID, memberUUID, input.Role)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.AbortRequest(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -171,20 +179,20 @@ func HandleRemoveTeamMember(w http.ResponseWriter, r *http.Request) {
 
 	teamUUID, err := checkForTeamID(teamID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	memberUUID, err := checkForMemberID(memberID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid member ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, fmt.Sprintf("Invalid member ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	// Suppression du membre de la Team
 	err = team_member_service.Remove(teamUUID, memberUUID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.AbortRequest(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

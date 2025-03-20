@@ -6,6 +6,7 @@ import (
 	"gox/database"
 	"gox/database/models"
 	team_service "gox/services/teams"
+	"gox/utils"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -19,14 +20,14 @@ func HandleCreateTeam(w http.ResponseWriter, r *http.Request) {
 		Type models.TeamType `json:"type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "body invalid", http.StatusBadRequest)
+		utils.AbortRequest(w, "body invalid", http.StatusBadRequest)
 		return
 	}
 
 	// Création de la Team
 	team, err := team_service.Create(input.Name, input.Type)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.AbortRequest(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -42,7 +43,7 @@ func HandleViewTeams(w http.ResponseWriter, r *http.Request) {
 	// Récupération de tous les Teams
 	teams, err := team_service.GetAll(database.DB)
 	if err != nil {
-		http.Error(w, "Error fetching teams", http.StatusInternalServerError)
+		utils.AbortRequest(w, "Error fetching teams", http.StatusInternalServerError)
 		return
 	}
 
@@ -71,20 +72,24 @@ func HandleGetTeam(w http.ResponseWriter, r *http.Request) {
 
 	teamUUID, err := checkForTeamID(teamID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	// Récupération de la Team
 	team, err := team_service.Get(teamUUID)
 	if err != nil {
-		http.Error(w, "Team not found", http.StatusNotFound)
+		utils.AbortRequest(w, "Team not found", http.StatusNotFound)
 		return
 	}
 
 	// Réponse JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(team)
+	data := map[string]interface{}{
+		"id":   team.ID,
+		"name": team.Name,
+		"type": team.Type,
+	}
+	utils.RespondJSON(w, data)
 }
 
 func HandleUpdateTeam(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +98,7 @@ func HandleUpdateTeam(w http.ResponseWriter, r *http.Request) {
 
 	teamUUID, err := checkForTeamID(teamID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
@@ -101,14 +106,14 @@ func HandleUpdateTeam(w http.ResponseWriter, r *http.Request) {
 		Name string `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "body invalid", http.StatusBadRequest)
+		utils.AbortRequest(w, "body invalid", http.StatusBadRequest)
 		return
 	}
 
 	// Mise à jour de la Team
 	err = team_service.UpdateName(teamUUID, input.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.AbortRequest(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -125,14 +130,14 @@ func HandleDeleteTeam(w http.ResponseWriter, r *http.Request) {
 
 	teamUUID, err := checkForTeamID(teamID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
+		utils.AbortRequest(w, fmt.Sprintf("Invalid team ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	// Suppression de la Team
 	err = team_service.Delete(teamUUID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.AbortRequest(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
