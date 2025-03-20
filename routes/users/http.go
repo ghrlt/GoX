@@ -169,9 +169,9 @@ func HandleCreateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Lire le corps de la requête, pour obtenir les données du profil
 	var profileData struct {
-		Username           string `json:"username"`
-		AvatarURL          string `json:"avatar_url"`
-		PublicStatsDisplay bool   `json:"public_stats_display"`
+		Username string `json:"username"`
+		// AvatarURL          string `json:"avatar_url"`
+		PublicStatsDisplay bool `json:"public_stats_display"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&profileData); err != nil {
 		http.Error(w, "body invalid", http.StatusBadRequest)
@@ -179,8 +179,8 @@ func HandleCreateUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userProfile := models.UserProfile{
-		Username:           profileData.Username,
-		AvatarURL:          profileData.AvatarURL,
+		Username: profileData.Username,
+		// AvatarURL:          profileData.AvatarURL,
 		PublicStatsDisplay: profileData.PublicStatsDisplay,
 	}
 
@@ -241,9 +241,9 @@ func HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		Username           string `json:"username"`
-		AvatarURL          string `json:"avatar_url"`
-		PublicStatsDisplay bool   `json:"public_stats_display"`
+		Username string `json:"username"`
+		// AvatarURL          string `json:"avatar_url"`
+		PublicStatsDisplay bool `json:"public_stats_display"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "body invalid", http.StatusBadRequest)
@@ -252,8 +252,8 @@ func HandleUpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Mettre à jour le profil de l'utilisateur
 	profile := models.UserProfile{
-		Username:           input.Username,
-		AvatarURL:          input.AvatarURL,
+		Username: input.Username,
+		// AvatarURL:          input.AvatarURL,
 		PublicStatsDisplay: input.PublicStatsDisplay,
 	}
 	if err := user_profile_service.Update(database.DB, user.ID, profile); err != nil {
