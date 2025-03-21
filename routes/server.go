@@ -6,6 +6,7 @@ import (
 	"gox/database"
 	"gox/database/models"
 	"gox/routes/administration"
+	admin_logs "gox/routes/administration/logs"
 	admin_subscriptions "gox/routes/administration/subscriptions"
 	"gox/routes/auth"
 	"gox/routes/teams"
@@ -161,14 +162,26 @@ func Start() {
 
 	// ~ ADMINISTRATION ~
 
-	createRoute(router, []string{http.MethodGet, http.MethodPost, http.MethodPatch}, "/administrate/subscriptions", func(w http.ResponseWriter, r *http.Request) {
+	createRoute(router, []string{http.MethodGet, http.MethodPost}, "/administrate/subscriptions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			admin_subscriptions.HandleGetSubscriptions(w, r)
 		} else if r.Method == http.MethodPost {
 			admin_subscriptions.HandleCreateSubscription(w, r)
+		}
+	}, []func(http.Handler) http.Handler{administration.AdministrationRouteMiddleware})
+
+	createRoute(router, []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete}, "/administrate/subscriptions/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			admin_subscriptions.HandleGetSubscription(w, r)
 		} else if r.Method == http.MethodPatch {
 			admin_subscriptions.HandleUpdateSubscription(w, r)
+		} else if r.Method == http.MethodDelete {
+			admin_subscriptions.HandleDeleteSubscription(w, r)
 		}
+	}, []func(http.Handler) http.Handler{administration.AdministrationRouteMiddleware})
+
+	createRoute(router, []string{http.MethodGet}, "/administrate/logs", func(w http.ResponseWriter, r *http.Request) {
+		admin_logs.HandleGetLogs(w, r)
 	}, []func(http.Handler) http.Handler{administration.AdministrationRouteMiddleware})
 
 	// ~ all others routes, 404

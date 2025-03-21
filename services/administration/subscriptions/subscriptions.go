@@ -27,3 +27,11 @@ func Update(subscription models.Subscription) (models.Subscription, error) {
 	err := database.DB.Save(&subscription).Error
 	return subscription, err
 }
+
+func Delete(subscription models.Subscription) error {
+	return database.DB.Delete(&subscription).Error
+}
+
+func DeleteByID(id string) error {
+	return database.DB.Delete(&models.Subscription{}, id).Error
+}
