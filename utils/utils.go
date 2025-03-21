@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -64,6 +65,11 @@ func DecodeJWT(tokenString string) (jwt.MapClaims, error) {
 	return claims, err
 }
 
+func EncodeBase64(data []byte) string {
+	str := base64.StdEncoding.EncodeToString(data)
+	return str
+}
+
 func ExtractUserIDFromJWT(r *http.Request) (uuid.UUID, error) {
 	tokenString := r.Header.Get("Authorization")
 
@@ -101,5 +107,8 @@ func AbortRequest(w http.ResponseWriter, message string, status int) {
 
 func RespondJSON(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	json.NewEncoder(w).Encode(map[string]any{
+		"success": true,
+		"data":    data,
+	})
 }

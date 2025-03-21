@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"gox/database"
 	"gox/database/models"
@@ -10,6 +11,7 @@ import (
 	"gox/routes/teams"
 	"gox/routes/users"
 	"gox/utils"
+	"io"
 	"net/http"
 	"time"
 
@@ -25,9 +27,7 @@ func createRoute(router *mux.Router, methods []string, route string, handler htt
 
 	r := router.HandleFunc(route, handler).Methods(methods...)
 	for _, middleware := range middlewares {
-		r = r.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			middleware(http.HandlerFunc(handler)).ServeHTTP(w, r)
-		}))
+		r = r.Handler(middleware(r.GetHandler()))
 	}
 }
 
@@ -189,6 +189,12 @@ type responseRecorder struct {
 	statusCode int
 }
 
+// WriteHeader met à jour le statusCode et appelle la méthode WriteHeader de http.ResponseWriter
+func (rec *responseRecorder) WriteHeader(code int) {
+	rec.statusCode = code
+	rec.ResponseWriter.WriteHeader(code)
+}
+
 func RequestLoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -206,6 +212,18 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 			}
 			authUserID = id
 		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			utils.ConsoleLog("❌ Erreur lors de la lecture du corps de la requête: %v", err)
+			utils.AbortRequest(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+
+		// Encode the body for logging
+		encodedBody := utils.EncodeBase64(body)
+
+		// Restore the body for downstream handlers
+		r.Body = io.NopCloser(bytes.NewBuffer(body))
 
 		// Capture de la réponse HTTP (pour connaître le statut)
 		rec := &responseRecorder{ResponseWriter: w, statusCode: http.StatusOK}
@@ -216,6 +234,7 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 			Domain:    r.Host,
 			Endpoint:  r.URL.Path,
 			Method:    r.Method,
+			Content:   string(encodedBody),
 			Status:    rec.statusCode,
 			Timestamp: start,
 		}

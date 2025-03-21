@@ -132,6 +132,7 @@ type RequestLog struct {
 	UserID    *uuid.UUID `gorm:"index;default:null"`
 	Domain    string     `gorm:"index"`
 	Endpoint  string     `gorm:"index"`
+	Content   string     `gorm:"type:bytea"`
 	Method    string
 	Status    int
 	Timestamp time.Time `gorm:"autoCreateTime"`
