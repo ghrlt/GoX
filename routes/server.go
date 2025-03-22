@@ -6,6 +6,7 @@ import (
 	"gox/database"
 	"gox/database/models"
 	"gox/routes/administration"
+	admin_auth "gox/routes/administration/auth"
 	admin_logs "gox/routes/administration/logs"
 	admin_subscriptions "gox/routes/administration/subscriptions"
 	"gox/routes/auth"
@@ -24,12 +25,11 @@ func createRoute(router *mux.Router, methods []string, route string, handler htt
 	utils.ConsoleLog("🚦 Creating route %s %s", methods, route)
 
 	// Add RequestLoggerMiddleware to all routes, must be the first middleware
-	middlewares = append([]func(http.Handler) http.Handler{RequestLoggerMiddleware}, middlewares...)
-
-	r := router.HandleFunc(route, handler).Methods(methods...)
-	for _, middleware := range middlewares {
-		r = r.Handler(middleware(r.GetHandler()))
+	finalHandler := http.Handler(http.HandlerFunc(handler))
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		finalHandler = middlewares[i](finalHandler)
 	}
+	router.Handle(route, finalHandler).Methods(methods...)
 }
 
 func Start() {
@@ -161,6 +161,10 @@ func Start() {
 	}, []func(http.Handler) http.Handler{teams.TeamMemberRouteMiddleware})
 
 	// ~ ADMINISTRATION ~
+
+	createRoute(router, []string{http.MethodPost}, "/administrate/login", func(w http.ResponseWriter, r *http.Request) {
+		admin_auth.HandleLogin(w, r)
+	}, nil)
 
 	createRoute(router, []string{http.MethodGet, http.MethodPost}, "/administrate/subscriptions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {

@@ -58,6 +58,7 @@ type User struct {
 	Email        string    `gorm:"index;unique"`
 	Password     string    `gorm:"not null"`
 	CreatedOn    time.Time `gorm:"autoCreateTime"`
+	IsAppAdmin   bool      `gorm:"default:false"`
 	IsActive     bool      `gorm:"default:true"`
 	IsAccessible bool      `gorm:"default:true"`
 }

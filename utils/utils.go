@@ -96,7 +96,17 @@ func ExtractUserIDFromJWT(r *http.Request) (uuid.UUID, error) {
 	return userID, nil
 }
 
+type responseRecorder struct {
+	http.ResponseWriter
+	statusCode int
+}
+
 func AbortRequest(w http.ResponseWriter, message string, status int) {
+	// Si on utilise notre responseRecorder, on veut que le champ statusCode soit mis à jour
+	if rec, ok := w.(*responseRecorder); ok {
+		rec.statusCode = status
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(map[string]any{
@@ -111,4 +121,5 @@ func RespondJSON(w http.ResponseWriter, data any) {
 		"success": true,
 		"data":    data,
 	})
+
 }

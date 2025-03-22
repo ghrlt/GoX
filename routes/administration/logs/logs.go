@@ -2,7 +2,7 @@ package admin_logs
 
 import (
 	admin_logs_service "gox/services/administration/logs"
-	utils "gox/utils"
+	"gox/utils"
 	"net/http"
 )
 
