@@ -24,11 +24,17 @@ import (
 func createRoute(router *mux.Router, methods []string, route string, handler http.HandlerFunc, middlewares []func(http.Handler) http.Handler) {
 	utils.ConsoleLog("🚦 Creating route %s %s", methods, route)
 
-	// Add RequestLoggerMiddleware to all routes, must be the first middleware
+	// Wrapping the handler
 	finalHandler := http.Handler(http.HandlerFunc(handler))
+
+	// Apply user-provided middlewares (from inner to outer)
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		finalHandler = middlewares[i](finalHandler)
 	}
+
+	// 🧱 Wrap with RequestLoggerMiddleware LAST (outermost)
+	finalHandler = RequestLoggerMiddleware(finalHandler)
+
 	router.Handle(route, finalHandler).Methods(methods...)
 }
 
